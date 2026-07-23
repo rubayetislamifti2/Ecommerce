@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Order;
+use App\Models\Payment;
+use App\Services\Stripe;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Stripe\StripeClient;
+
+class PaymentController extends Controller
+{
+    public function checkout(Request $request, ?Stripe $stripe)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'order_id' => 'required|exists:orders,id',
+                'total_amount' => 'required',
+                'provider'=>'required'
+            ]);
+            if ($validator->fails()) {
+                return redirect()->back()->withErrors($validator->errors())->withInput();
+            }
+
+            if ($request->provider == 'cod'){
+                Payment::create([
+                    'order_id'=>$request->order_id,
+                    'provider'=>$request->provider,
+                    'status'=>'paid',
+                ]);
+
+                Order::where('id',$request->order_id)->update([
+                    'status'=>'paid'
+                ]);
+            }elseif ($request->provider == 'stripe'){
+                $order = Order::find($request->order_id);
+                $url = $stripe->initiate($order);
+
+                return redirect($url);
+            }
+
+            return redirect()->back()->with('success', 'Payment Successful');
+        }catch (\Exception $exception){
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
+    }
+
+    public function success(Request $request, $order)
+    {
+        try {
+            $orderModel = Order::findOrFail($order);
+
+
+            $stripe = new StripeClient(config('services.stripe.secret'));
+            $session = $stripe->checkout->sessions->retrieve($request->query('session_id'));
+
+            $orderModel->status = 'paid';
+            $orderModel->save();
+
+            $payment = Payment::where('order_id', $orderModel->id)->first();
+
+            if ($payment) {
+                $payment->status = 'paid';
+                $payment->transaction_id = $session->payment_intent;
+                $payment->raw_response = json_encode($session->toArray());
+                $payment->save();
+            }
+
+            return view('payment.success');
+        }catch (\Exception $exception){
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
+
+    }
+
+    public function cancel(Request $request, $order)
+    {
+        try {
+            return view('payment.cancel');
+        }catch (\Exception $exception){
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
+    }
+}
