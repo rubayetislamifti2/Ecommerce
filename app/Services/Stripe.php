@@ -37,7 +37,6 @@ class Stripe{
             'payment_method_types' => ['card'],
             'metadata'=>[
                 'order_id'=>$order->id,
-                'provider'=>'stripe',
             ]
         ]);
 

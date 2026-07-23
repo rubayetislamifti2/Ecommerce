@@ -35,6 +35,11 @@ class PaymentController extends Controller
                 ]);
             }elseif ($request->provider == 'stripe'){
                 $order = Order::find($request->order_id);
+                Payment::create([
+                    'order_id'=>$request->order_id,
+                    'provider'=>$request->provider,
+                    'status'=>'paid',
+                ]);
                 $url = $stripe->initiate($order);
 
                 return redirect($url);
@@ -52,7 +57,7 @@ class PaymentController extends Controller
             $orderModel = Order::findOrFail($order);
 
 
-            $stripe = new StripeClient(config('services.stripe.secret'));
+            $stripe = new StripeClient(config('stripe.stripe.secret'));
             $session = $stripe->checkout->sessions->retrieve($request->query('session_id'));
 
             $orderModel->status = 'paid';
@@ -67,7 +72,7 @@ class PaymentController extends Controller
                 $payment->save();
             }
 
-            return view('payment.success');
+            return view('payment.success',['order'=>$orderModel]);
         }catch (\Exception $exception){
             return redirect()->back()->with('error', $exception->getMessage());
         }

@@ -32,7 +32,7 @@
                             </div>
                             <div>
                                 <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Payment Method</span>
-                                <p class="text-sm font-bold text-gray-800 uppercase">{{ $order->payment_method ?? 'COD / Card' }}</p>
+                                <p class="text-sm font-bold text-gray-800 uppercase">{{ $order->payment->provider ?? 'COD / Card' }}</p>
                             </div>
                             <div>
                                 <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Total Paid</span>
@@ -41,11 +41,11 @@
                         </div>
 
                         <!-- Purchased Items Summary -->
-                        @if($order->items && $order->items->count() > 0)
+                        @if($order->orderItems && $order->orderItems->count() > 0)
                             <div>
                                 <span class="text-xs text-gray-400 uppercase font-bold tracking-wider block mb-2">Order Items</span>
                                 <div class="space-y-2">
-                                    @foreach($order->items as $item)
+                                    @foreach($order->orderItems as $item)
                                         <div class="flex justify-between items-center text-sm">
                                             <div class="flex items-center gap-2">
                                                 <span class="font-medium text-gray-800">{{ $item->product->name ?? 'Product' }}</span>
