@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\SaveCard;
 use App\Services\Bkash;
 use App\Services\Stripe;
+use App\Services\StripeIntent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -94,7 +95,7 @@ class PaymentController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
     }
-    public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash)
+    public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash, ?StripeIntent $stripeIntent)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -116,8 +117,40 @@ class PaymentController extends Controller
                 Order::where('id',$request->order_id)->update([
                     'status'=>'paid'
                 ]);
-            }elseif ($request->provider == 'stripe'){
+            }
+            elseif ($request->provider == 'stripe'){
                 $order = Order::find($request->order_id);
+                if (Auth::user()->savedOneCards()){
+                    $savedCard = Auth::user()->savedOneCards()->first();
+
+                    $result = $stripeIntent->payWithSavedCard($order, $savedCard);
+
+                    if ($result['status'] === 'succeeded') {
+                        Payment::create([
+                            'order_id' => $order->id,
+                            'provider' => 'stripe',
+                            'status' => 'paid',
+                            'transaction_id' => $result['payment_intent']->id,
+                            'raw_response' => json_encode($result['payment_intent']),
+                        ]);
+
+                        $order->update(['status' => 'paid']);
+
+                        return redirect()->route('order.success', ['order' => $order->id])
+                            ->with('success', 'Payment Successful');
+                    }
+
+                    if ($result['status'] === 'requires_action') {
+                        return response()->json([
+                            'requires_action' => true,
+                            'client_secret' => $result['client_secret'],
+                            'order_id' => $order->id,
+                        ]);
+                    }
+
+                    return redirect()->back()->with('error', $result['message']);
+                }
+
                 Payment::create([
                     'order_id'=>$request->order_id,
                     'provider'=>$request->provider,
@@ -126,7 +159,8 @@ class PaymentController extends Controller
                 $url = $stripe->initiate($order);
 
                 return redirect($url);
-            }else{
+            }
+            else{
                 $order = Order::find($request->order_id);
                 Payment::create([
                     'order_id'=>$request->order_id,

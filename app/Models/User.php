@@ -55,6 +55,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Order::class,'user_id','id');
     }
 
+    public function savedOneCards()
+    {
+        return $this->hasOne(SaveCard::class,'user_id','id')->where('is_default',true);
+    }
+
     public function savedCards()
     {
         return $this->hasMany(SaveCard::class,'user_id','id');
