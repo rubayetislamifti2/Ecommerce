@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\Bkash;
 use App\Services\Stripe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -11,7 +12,7 @@ use Stripe\StripeClient;
 
 class PaymentController extends Controller
 {
-    public function checkout(Request $request, ?Stripe $stripe)
+    public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -42,6 +43,16 @@ class PaymentController extends Controller
                 ]);
                 $url = $stripe->initiate($order);
 
+                return redirect($url);
+            }else{
+                $order = Order::find($request->order_id);
+                Payment::create([
+                    'order_id'=>$request->order_id,
+                    'provider'=>$request->provider,
+                    'status'=>'paid',
+                ]);
+                $token = $bkash->getToken();
+                $url = $bkash->createPayment($order);
                 return redirect($url);
             }
 
@@ -83,6 +94,41 @@ class PaymentController extends Controller
     {
         try {
             return view('payment.cancel');
+        }catch (\Exception $exception){
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
+    }
+
+    public function callback(Request $request)
+    {
+        try {
+            $paymentId = $request->query('paymentID');
+            $status = $request->query('status');
+
+            $bkash = new Bkash();
+            $token = $bkash->getToken();
+            $execute = $bkash->executePayment($paymentId);
+
+            if (!$status == 'success'){
+                return view('payment.cancel');
+            }
+
+            $orderId = $execute['payerReference'];
+
+            $order = Order::find($orderId);
+            $order->status = 'paid';
+            $order->save();
+
+            $payment = Payment::where('order_id', $orderId)->first();
+
+            if ($payment) {
+                $payment->status = 'paid';
+                $payment->transaction_id = $execute['trxID'];
+                $payment->raw_response = json_encode($execute);
+                $payment->save();
+            }
+
+            return view('payment.success',['order'=>$order]);
         }catch (\Exception $exception){
             return redirect()->back()->with('error', $exception->getMessage());
         }

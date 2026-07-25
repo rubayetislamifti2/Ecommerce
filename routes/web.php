@@ -24,6 +24,7 @@ Route::get('cart',[OrderController::class,'index'])->name('order.index');
 Route::post('checkout',[PaymentController::class,'checkout'])->name('order.checkout');
 Route::get('payment/success/{order}',[PaymentController::class,'success'])->name('order.success');
 Route::get('payment/cancel/{order}',[PaymentController::class,'cancel'])->name('order.cancel');
+Route::get('payment/bkash/callback',[PaymentController::class,'callback'])->name('bkash.callback');
 
 Route::prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
