@@ -4,14 +4,96 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\SaveCard;
 use App\Services\Bkash;
 use App\Services\Stripe;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Stripe\StripeClient;
 
 class PaymentController extends Controller
 {
+
+    public function paymentMethodPage()
+    {
+        try {
+            $card = SaveCard::where('user_id', Auth::id())->get();
+            return view('payment.payment_method',['card'=>$card]);
+        }catch (\Exception $exception){
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
+
+    }
+
+    public function destroySavedCard(Request $request,$id)
+    {
+        try {
+            $savedCard = SaveCard::find($id);
+
+            $savedCard->delete();
+
+            return redirect()->back()->with('success', 'Card deleted');
+        }catch (\Exception $exception){
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
+    }
+
+    public function storePaymentMethod(Request $request)
+    {
+        $request->validate([
+            'payment_method_id' => 'required|string',
+            'is_default' => 'boolean',
+        ]);
+
+        try {
+            $stripe = new StripeClient(config('stripe.stripe.secret'));
+            $user = Auth::user();
+
+            if (!$user->stripe_customer_id) {
+                $customer = $stripe->customers->create([
+                    'email' => $user->email,
+                    'name' => $user->name,
+                ]);
+                $user->stripe_customer_id = $customer->id;
+                $user->save();
+            }
+
+            $stripe->paymentMethods->attach($request->payment_method_id, [
+                'customer' => $user->stripe_customer_id,
+            ]);
+
+            $pm = $stripe->paymentMethods->retrieve($request->payment_method_id);
+
+            if ($request->boolean('is_default')) {
+                SaveCard::where('user_id', $user->id)->update(['is_default' => false]);
+            }
+
+            $saved = SaveCard::create([
+                'user_id' => $user->id,
+                'stripe_payment_method_id' => $pm->id,
+                'brand' => $pm->card->brand,
+                'last_four' => $pm->card->last4,
+                'exp_month' => $pm->card->exp_month,
+                'exp_year' => $pm->card->exp_year,
+                'is_default' => $request->boolean('is_default'),
+            ]);
+
+            return response()->json([
+                'message' => 'Payment method successfully updated.',
+                'card' => [
+                    'brand' => $pm->card->brand,
+                    'last_four' => $pm->card->last4,
+                    'exp_month' => $pm->card->exp_month,
+                    'exp_year' => $pm->card->exp_year,
+                ],
+            ]);
+
+
+        } catch (\Exception $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+    }
     public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash)
     {
         try {

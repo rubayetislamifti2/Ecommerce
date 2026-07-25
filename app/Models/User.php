@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password','stripe_customer_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements JWTSubject
 {
@@ -53,5 +53,10 @@ class User extends Authenticatable implements JWTSubject
 
     public function orders(){
         return $this->hasMany(Order::class,'user_id','id');
+    }
+
+    public function savedCards()
+    {
+        return $this->hasMany(SaveCard::class,'user_id','id');
     }
 }

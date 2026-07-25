@@ -21,6 +21,10 @@ Route::get('products/show/{product}', [ProductController::class, 'userShow'])->n
 Route::post('add-to-cart',[OrderController::class,'store'])->name('add.to.cart');
 Route::get('cart',[OrderController::class,'index'])->name('order.index');
 
+Route::get('payment-method',[PaymentController::class,'paymentMethodPage'])->name('payment.method');
+Route::post('payment-method', [PaymentController::class, 'storePaymentMethod'])->name('payment-method.store');
+Route::delete('payment-method/{id}', [PaymentController::class, 'destroySavedCard'])->name('payment-method.destroy');
+
 Route::post('checkout',[PaymentController::class,'checkout'])->name('order.checkout');
 Route::get('payment/success/{order}',[PaymentController::class,'success'])->name('order.success');
 Route::get('payment/cancel/{order}',[PaymentController::class,'cancel'])->name('order.cancel');
