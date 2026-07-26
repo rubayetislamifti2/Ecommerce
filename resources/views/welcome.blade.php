@@ -52,7 +52,7 @@
                                 @endif
                             </a>
 
-                            @if($product->status !== 'active')
+                            @if(!$product->status)
                                 <span class="absolute top-3 left-3 bg-gray-500 text-white text-xs font-bold px-2 py-1 rounded">Inactive</span>
                             @elseif($product->stock <= 0)
                                 <span class="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
@@ -73,9 +73,20 @@
                                 <div>
                                     <span class="text-lg font-bold text-gray-900">${{ number_format($product->price, 2) }}</span>
                                 </div>
-                                <button class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
-                                </button>
+                                @if(Auth::check())
+                                    <form action="{{route('add.to.cart')}}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="items[0][product_id]" value="{{ $product->id }}">
+                                        <input type="hidden" name="items[0][quantity]" value="1">
+                                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+                                        </button>
+                                    </form>
+                                @else
+                                    <a href="{{route('login-page')}}" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>

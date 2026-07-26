@@ -45,6 +45,7 @@ class StripeIntent
                     'enabled' => true,
                     'allow_redirects' => 'never',
                 ],
+//                'return_url' => route('order.success', ['order' => $order->id]),
             ]);
 
             return $this->handleIntentResult($intent);
@@ -61,7 +62,16 @@ class StripeIntent
                 'payment_intent' => null,
                 'message' => $e->getMessage(),
             ];
+        } catch (\Exception $exception) {
+            dd([
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => collect($exception->getTrace())->take(5)->toArray(),
+            ]);
         }
+
+
     }
 
     /**

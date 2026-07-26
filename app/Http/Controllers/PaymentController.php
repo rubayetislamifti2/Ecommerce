@@ -120,9 +120,9 @@ class PaymentController extends Controller
             }
             elseif ($request->provider == 'stripe'){
                 $order = Order::find($request->order_id);
-                if (Auth::user()->savedOneCards()){
-                    $savedCard = Auth::user()->savedOneCards()->first();
+                $savedCard = Auth::user()->savedOneCards()->first();
 
+                if ($savedCard) {
                     $result = $stripeIntent->payWithSavedCard($order, $savedCard);
 
                     if ($result['status'] === 'succeeded') {
