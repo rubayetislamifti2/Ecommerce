@@ -156,6 +156,20 @@
                                             <span class="text-xs font-bold text-gray-800 self-start">SSLCommerz</span>
                                         </label>
 
+                                        <label class="relative flex flex-col items-center justify-between p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-indigo-500 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50/30 has-[:checked]:ring-2 has-[:checked]:ring-indigo-600 transition shadow-sm">
+                                            <input type="radio" name="provider" value="paypal" class="sr-only">
+                                            <div class="flex items-center justify-between w-full mb-2">
+                                                <!-- bKash Image Logo -->
+                                                <div class="h-8 flex items-center">
+                                                    <img src="{{ asset('paypal.png') }}" alt="paypal" class="h-7 w-auto object-contain">
+                                                </div>
+                                                <span class="w-4 h-4 border border-gray-300 rounded-full flex items-center justify-center bg-white check-icon">
+                                                    <span class="w-2 h-2 bg-indigo-600 rounded-full hidden"></span>
+                                                </span>
+                                            </div>
+                                            <span class="text-xs font-bold text-gray-800 self-start">PayPal</span>
+                                        </label>
+
                                     </div>
                                 </div>
 
