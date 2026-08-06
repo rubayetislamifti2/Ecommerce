@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\SaveCard;
 use App\Services\Bkash;
+use App\Services\SSLCommerz;
 use App\Services\Stripe;
 use App\Services\StripeIntent;
 use Illuminate\Http\Request;
@@ -95,7 +96,7 @@ class PaymentController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
     }
-    public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash, ?StripeIntent $stripeIntent)
+    public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash, ?StripeIntent $stripeIntent, ?SSLCommerz $commerz)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -159,6 +160,11 @@ class PaymentController extends Controller
                 $url = $stripe->initiate($order);
 
                 return redirect($url);
+            }
+            elseif ($request->provider == 'sslcommerz'){
+                $ssl = $commerz->initPayment();
+
+                return redirect()->away($ssl);
             }
             else{
                 $order = Order::find($request->order_id);
