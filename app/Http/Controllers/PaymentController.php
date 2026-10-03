@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\SaveCard;
 use App\Services\Bkash;
+use App\Services\Nagad;
 use App\Services\PayPal;
 use App\Services\SSLCommerz;
 use App\Services\Stripe;
@@ -97,7 +98,7 @@ class PaymentController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
     }
-    public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash, ?StripeIntent $stripeIntent, ?SSLCommerz $commerz, ?PayPal $payPal)
+    public function checkout(Request $request, ?Stripe $stripe, ?Bkash $bkash, ?StripeIntent $stripeIntent, ?SSLCommerz $commerz, ?PayPal $payPal, ?Nagad $nagad)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -170,6 +171,20 @@ class PaymentController extends Controller
             elseif ($request->provider == 'paypal'){
                 $pay = $payPal->createOrder();
                 return redirect()->away($pay);
+            }
+            elseif ($request->provider == 'nagad'){
+                $order = Order::findOrFail($request->order_id);
+                $invoice = 'N' . $order->id . now()->format('ymdHis');
+                Payment::create([
+                    'order_id'       => $order->id,
+                    'provider'       => 'nagad',
+                    'status'         => 'pending',
+                    'transaction_id' => $invoice,
+                ]);
+
+                $url = $nagad->createPaymentURL($invoice, $request->total_amount);
+
+                return redirect()->away($url);
             }
             else{
                 $order = Order::find($request->order_id);
@@ -257,6 +272,47 @@ class PaymentController extends Controller
 
             return view('payment.success',['order'=>$order]);
         }catch (\Exception $exception){
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
+    }
+
+    public function nagadCallback(Request $request, Nagad $nagad)
+    {
+        try {
+            $payment = Payment::where('provider', 'nagad')
+                ->where('transaction_id', $request->query('order_id'))
+                ->first();
+
+            if (!$payment) {
+                return view('payment.cancel');
+            }
+
+            if ($payment->status === 'paid') {
+                return view('payment.success', ['order' => Order::findOrFail($payment->order_id)]);
+            }
+
+            if ($request->query('status') !== 'Success' || !$request->query('payment_ref_id')) {
+                $payment->update(['status' => 'failed']);
+                return view('payment.cancel');
+            }
+
+            $result = $nagad->verify($request->query('payment_ref_id'));
+
+            if (($result['status'] ?? null) !== 'Success' || ($result['orderId'] ?? null) !== $payment->transaction_id) {
+                $payment->update(['status' => 'failed', 'raw_response' => json_encode($result)]);
+                return view('payment.cancel');
+            }
+
+            $payment->update([
+                'status'       => 'paid',
+                'raw_response' => json_encode($result),
+            ]);
+
+            $order = Order::findOrFail($payment->order_id);
+            $order->update(['status' => 'paid']);
+
+            return view('payment.success', ['order' => $order]);
+        } catch (\Exception $exception) {
             return redirect()->back()->with('error', $exception->getMessage());
         }
     }

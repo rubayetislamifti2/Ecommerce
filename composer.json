@@ -11,7 +11,8 @@
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "stripe/stripe-php": "^21.0",
-        "tymon/jwt-auth": "^2.3"
+        "tymon/jwt-auth": "^2.3",
+        "xenon/nagad-api": "^1.9"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

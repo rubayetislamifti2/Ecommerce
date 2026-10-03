@@ -30,6 +30,8 @@ Route::get('payment/success/{order}',[PaymentController::class,'success'])->name
 Route::get('payment/cancel/{order}',[PaymentController::class,'cancel'])->name('order.cancel');
 Route::get('payment/bkash/callback',[PaymentController::class,'callback'])->name('bkash.callback');
 
+Route::get('/nagad/callback', [PaymentController::class, 'nagadCallback'])->name('nagad.callback');
+
 Route::prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
 
