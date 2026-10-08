@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Stripe\StripeClient;
 
 class ProductController extends Controller
 {
@@ -41,6 +43,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         try {
+            $stripe = new StripeClient(config('stripe.stripe.secret'));
             DB::beginTransaction();
             $validatedData = Validator::make($request->all(), [
                 'name' => 'required',
@@ -59,14 +62,30 @@ class ProductController extends Controller
             $data['slug'] = Str::slug($data['name']);
             $product = Product::create($data);
 
+            $imageUrls = [];
             foreach ($data['images'] as $image) {
                 $image = $this->uploadFile($image, 'products/');
 
                 $product->images()->create([
                     'image'=> $image,
                 ]);
+
+                $imageUrls[] = asset($image);
             }
 
+            $stripeProduct = $stripe->products->create([
+                'name' => $data['name'],
+                'images' => array_slice($imageUrls, 0, 8),
+                'default_price_data'=>[
+                    'currency'=> 'bdt',
+                    'unit_amount' => $data['price'] * 100,
+                ]
+            ]);
+
+            $product->update([
+                'stripe_product_id' => $stripeProduct->id,
+                'stripe_price_id'=> $stripeProduct->default_price
+            ]);
 
             DB::commit();
             return redirect()->back()->with('success', 'Product created successfully');

@@ -14,6 +14,8 @@ class Product extends Model
         'price',
         'stock',
         'status',
+        'stripe_product_id',
+        'stripe_price_id',
     ];
 
     public function images()
